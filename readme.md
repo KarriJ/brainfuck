@@ -27,11 +27,12 @@ bfc -d <source.b>
 
 ## Debugger
 * Displays data array 5 cells to each side from data pointer
-* Displays current instruction flow 10 instructions ahead
+* Displays current instruction stream 10 instructions ahead
+* Allows moving pointer around and assigning new values to cells
 ### Debugger commands
 ```
 <byte> <n>      = Assign value <n> to byte at current data pointer location
 <ptr> <n>       = Assign value <n> to data pointer (Move pointer)
 <offset> <n>    = Assign offset <n> to data array display without moving pointer
-<empty>         = Run next instruction in instruction flow
+<empty>         = Run next instruction in instruction stream
 ```

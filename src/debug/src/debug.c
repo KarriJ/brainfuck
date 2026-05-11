@@ -1,5 +1,6 @@
 // for the record this specifically can be a cause of some major headache 
-// I have not made a good job with with
+// I have not made a good job with this
+// Memory access violations for all I know
 
 #include <stdbool.h>
 #include <stddef.h>
