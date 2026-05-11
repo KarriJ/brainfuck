@@ -66,7 +66,7 @@ void display_cell_number(int cell, int cell_count)
     // displays the index of given cell
     if (cell < 0)
     {
-        cell = cell_count - cell;
+        cell = cell_count + cell;
     }
     printf(" %*d  ", MAX_DIGITS,  cell);
 }
