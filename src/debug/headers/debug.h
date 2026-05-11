@@ -6,6 +6,22 @@
 
 extern bool DEBUG_ENABLED;
 
+typedef struct 
+{
+    uint8_t* array;
+    size_t capacity;
+    size_t first;
+} Stdout_tracker;
+
+#define TRACKER_CAPACITY 10
+
+extern bool TRACKING_STARTED;
+extern Stdout_tracker STDOUT_TRACKER;
+
+void tracker_push(Stdout_tracker* tracker, uint8_t ch);
+void tracker_print(Stdout_tracker* tracker);
+Stdout_tracker make_tracker();
+void track_output(char ch);
 int debug_enabled();
 int debug_enable();
 int debug_disable();

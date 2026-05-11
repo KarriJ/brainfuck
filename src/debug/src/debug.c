@@ -1,7 +1,6 @@
 // for the record this specifically can be a cause of some major headache 
 // I have not made a good job with this
 // Memory access violations for all I know
-
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>
@@ -20,6 +19,57 @@ bool DEBUG = false;
 int MAX_DIGITS = -1;
 int OFFSET = 0;
 char* ERROR_MESSAGE;
+
+typedef struct 
+{
+    uint8_t* array;
+    size_t capacity;
+    size_t first;
+} Stdout_tracker;
+
+#define TRACKER_CAPACITY 25
+
+bool TRACKING_STARTED = false;
+Stdout_tracker STDOUT_TRACKER;
+
+void tracker_push(Stdout_tracker* tracker, uint8_t val)
+{
+    tracker->array[tracker->first] = val;
+    tracker->first = (tracker->first + 1) % tracker->capacity;
+}
+
+void tracker_print(Stdout_tracker* tracker)
+{
+    for (int ii = 0; ii < tracker->capacity; ii++)
+    {
+        int idx = (tracker->first + ii) % tracker->capacity;
+        putchar(tracker->array[idx]);
+    }
+}
+
+Stdout_tracker make_tracker()
+{
+    static uint8_t array[TRACKER_CAPACITY + 1];
+    //array[TRACKER_CAPACITY] = '\0';
+    memset(array, ' ', TRACKER_CAPACITY);
+
+    return (Stdout_tracker) {
+        array,
+        TRACKER_CAPACITY,
+        0
+    };
+}
+
+void track_output(uint8_t val)
+{
+    if (TRACKING_STARTED == false)
+    {
+        STDOUT_TRACKER = make_tracker();
+        TRACKING_STARTED = true;
+    }
+
+    tracker_push(&STDOUT_TRACKER, val);
+}
 
 int debug_enabled()
 {
@@ -139,7 +189,7 @@ void display_instruction_stream(char* bf, size_t idx)
         program_length = strlen(bf);
     }
 
-    printf("Instruction stream : ");
+    printf("Stream  : ");
 
     for (int ii = idx; ii < idx + 10; ii++)
     {
@@ -151,7 +201,19 @@ void display_instruction_stream(char* bf, size_t idx)
         printf("%c ", bf[ii]);
     }
 
-    printf("..\n");
+    printf("\n");
+}
+
+void display_stdout()
+{
+    printf("__STDOUT__\n");
+    
+    if (TRACKING_STARTED == true)
+    {
+        tracker_print(&STDOUT_TRACKER);
+    }
+
+    printf("\n____");
 }
 
 void display(char* bf, uint8_t* array, size_t ptr, size_t idx, int cell_count)
@@ -163,9 +225,12 @@ void display(char* bf, uint8_t* array, size_t ptr, size_t idx, int cell_count)
     printf("\n\n");
     display_modifiers(ptr);
     display_instruction_stream(bf, idx);
+    printf("\n");
+    display_stdout();
     printf("\n\n");
     display_instructions();
     printf("\n\n");
+    
     display_error_messages();
     printf("\n");
 }

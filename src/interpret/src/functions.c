@@ -1,11 +1,15 @@
+#include <stddef.h>
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 #include "../../../headers/bf_config.h"
-
+#include "../../debug/headers/debug.h"
+#include <stdbool.h>
 
 #define CELL_COUNT 30000
+
+
 
 int bounds_check(size_t ptr)
 {
@@ -131,6 +135,11 @@ int output(uint8_t* array, size_t ptr)
     if (bounds_check(ptr) == 1)
     {
         return 1;
+    }
+
+    if (debug_enabled() == 1)
+    {
+        track_output(array[ptr]);
     }
 
     putchar(array[ptr]);    
