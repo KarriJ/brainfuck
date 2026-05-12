@@ -16,7 +16,7 @@ int run_program(char* bf)
     {   
         if (debug_enabled() == 1)
         {
-            if (debug(array, bf, &ptr, &idx, CELL_COUNT) == 1)
+            if (debug(array, bf, &ptr, &idx) == 1)
             {
                 printf("Error in debug\n");
                 return 1;

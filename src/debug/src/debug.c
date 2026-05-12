@@ -1,88 +1,21 @@
 // for the record this specifically can be a cause of some major headache 
 // I have not made a good job with this
-// Memory access violations for all I know
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdint.h>
 #include <stdint.h>
 #include <string.h>
-#include <ctype.h>
+#include "../../interpret/headers/interpreter_config.h"
+#include "../headers/debug_display.h"
+#include "../headers/debug_commands.h"
 
-#define INSTRUCTIONS "COMMANDS:\n| <empty> = execute instruction | <offset> <n> = change ptr view offset|\n| <byte> <n> = change byte value | <ptr> <n> = move ptr |\n"
-#define BYTE_CMD "byte"
-#define PTR_CMD "ptr"
-#define OFFSET_CMD "offset"
-#define INVALID_CMD_MSG "Command not recognized\n"
-#define INVALID_PTR_MSG "Pointer value invalid\n"
 
-bool DEBUG = false;
-int MAX_DIGITS = -1;
-int OFFSET = 0;
-char* ERROR_MESSAGE;
-
-typedef struct 
-{
-    uint8_t* array;
-    size_t capacity;
-    size_t first;
-    size_t count;
-} Stdout_tracker;
-
-#define TRACKER_CAPACITY 25
-
-bool TRACKING_STARTED = false;
-Stdout_tracker STDOUT_TRACKER;
-
-void tracker_push(Stdout_tracker* tracker, uint8_t val)
-{   
-    if (tracker->count < tracker->capacity)
-    {
-        tracker->array[tracker->count] = val; 
-        tracker->count++;
-    }
-    else  
-    {
-        tracker->array[tracker->first] = val;
-        tracker->first = (tracker->first + 1) % tracker->capacity;
-    }
-}
-
-void tracker_print(Stdout_tracker* tracker)
-{
-    for (int ii = 0; ii < tracker->capacity; ii++)
-    {
-        int idx = (tracker->first + ii) % tracker->capacity;
-        putchar(tracker->array[idx]);
-    }
-}
-
-Stdout_tracker make_tracker()
-{
-    static uint8_t array[TRACKER_CAPACITY + 1];
-    array[TRACKER_CAPACITY] = '\0';
-
-    return (Stdout_tracker) {
-        array,
-        TRACKER_CAPACITY,
-        0
-    };
-}
-
-void track_output(uint8_t val)
-{
-    if (TRACKING_STARTED == false)
-    {
-        STDOUT_TRACKER = make_tracker();
-        TRACKING_STARTED = true;
-    }
-
-    tracker_push(&STDOUT_TRACKER, val);
-}
+bool DEBUGENABLED = false;
 
 int debug_enabled()
 {
-    if (DEBUG)
+    if (DEBUGENABLED)
     {
         return 1;
     }
@@ -92,7 +25,7 @@ int debug_enabled()
 
 int debug_enable()
 {
-    DEBUG = true;
+    DEBUGENABLED = true;
 
     if (debug_enabled() == 1)
     {
@@ -105,7 +38,7 @@ int debug_enable()
 
 int debug_disable()
 {
-    DEBUG = false;
+    DEBUGENABLED = false;
 
     if (debug_enabled() == 0)
     {
@@ -116,206 +49,7 @@ int debug_disable()
     return 1;
 }
 
-void clear_screen()
-{
-    printf("\033[2J\033[H");
-}
-
-int cell_index_fix(int cell, int cell_count)
-{
-    // helps wrap cell index if below 0 or above CELL_COUNT - 1
-    if (cell < 0)
-    {
-        cell = cell_count + cell;
-    }
-
-    if (cell >= cell_count)
-    {
-        cell = cell % cell_count;
-    }
-
-    return cell;
-}
-
-void display_cell_number(int cell, int cell_count)
-{
-    // displays the index of given cell
-    cell = cell_index_fix(cell, cell_count);
-    printf(" %*d  ", MAX_DIGITS,  cell);
-}
-
-void display_cell_numbers(uint8_t* array, int ptr, int cell_count)
-{   
-    // displays 11 cells
-    // 5 on both sides of ptr
-    printf("CELL : ...");
-    int cell = (int)ptr + OFFSET - 5;
-    
-    for (int ii = 0; ii < 11; ii++, cell++)
-    {
-        display_cell_number(cell, cell_count);
-    }
-    printf("...\n");
-}
-
-void display_cell_value(uint8_t* array, int cell, int cell_count)
-{
-    // displays value of byte in data array
-    cell = cell_index_fix(cell, cell_count);
-    printf("[%*u] ", MAX_DIGITS,  array[cell]);
-}
-
-void display_cell_values(uint8_t* array, int ptr, int cell_count)
-{
-    // displays 11 values from data array
-    // 5 from both sides of ptr
-    printf("VAL  : ...");
-    int cell = (int)ptr + OFFSET - 5;
-    
-    for (int ii = 0; ii < 11; ii++, cell++)
-    {
-        display_cell_value(array, cell, cell_count);
-    }
-    printf("...\n");
-
-}
-
-void display_ascii_value(uint8_t* array, int cell, int cell_count)
-{
-    // displays ascii representation for byte in data array
-    cell = cell_index_fix(cell, cell_count);
-    char ch = ( isprint(array[cell]) ) ? (char)array[cell] : ' ';
-    printf("[%*c] ", MAX_DIGITS, ch);
-}
-
-void display_ascii_values(uint8_t* array, int ptr, int cell_count)
-{
-    // displays ascii representations for 11 values from data array
-    // 5 from both sides of ptr
-    printf("ASCII: ...");
-    int cell = (int)ptr + OFFSET - 5;
-    
-    for (int ii = 0; ii < 11; ii++, cell++)
-    {
-        display_ascii_value(array, cell, cell_count);
-    }
-    printf("...\n");
-
-}
-
-void display_modifiers(size_t ptr)
-{
-    printf("POINTER : %d\n", (int)ptr);
-    printf("OFFSET  : %d\n", OFFSET);
-}
-
-void display_instructions()
-{
-    // displays istructions
-    printf("%s\n", INSTRUCTIONS);
-}
-void display_error_messages()
-{
-    if (ERROR_MESSAGE != NULL)
-    {
-        printf("%s\n", ERROR_MESSAGE);
-        ERROR_MESSAGE = NULL;
-    }
-}
-
-void display_instruction_stream(char* bf, size_t idx)
-{   
-    static int program_length = -1;
-    if (program_length == -1)
-    {
-        program_length = strlen(bf);
-    }
-
-    printf("Stream  : ");
-
-    for (int ii = idx; ii < idx + 10; ii++)
-    {
-        if (ii >= program_length)
-        {
-            break;
-        }
-
-        printf("%c ", bf[ii]);
-    }
-
-    printf("\n");
-}
-
-void display_stdout()
-{
-    printf("__STDOUT__\n");
-    
-    if (TRACKING_STARTED == true)
-    {
-        tracker_print(&STDOUT_TRACKER);
-    }
-
-    printf("\n____");
-}
-
-void display(char* bf, uint8_t* array, size_t ptr, size_t idx, int cell_count)
-{
-    clear_screen();
-    printf("\n\n");
-    display_cell_numbers(array, ptr, cell_count);
-    display_cell_values(array, ptr, cell_count);
-    display_ascii_values(array, ptr, cell_count);
-    printf("\n\n");
-    display_modifiers(ptr);
-    display_instruction_stream(bf, idx);
-    printf("\n");
-    display_stdout();
-    printf("\n\n");
-    display_instructions();
-    printf("\n\n");
-    
-    display_error_messages();
-    printf("\n");
-}
-
-void set_max_digits(int cell_count)
-{
-    MAX_DIGITS = snprintf(NULL, 0, "%d", cell_count);
-    MAX_DIGITS++; // for additional - character
-}
-
-int byte_modify(uint8_t* arr, size_t ptr, int n)
-{  
-    if (arr == NULL)
-    {
-        printf("Data array NULL\n");
-    }
-
-    arr[ptr] = n;
-    return 0;
-}
-
-int ptr_modify(size_t* ptr, int n, size_t cell_count)
-{  
-    if (n < 0 || n >= cell_count)
-    {
-        ERROR_MESSAGE = INVALID_PTR_MSG;
-        return -1;
-    }
-
-    (*ptr) = (size_t)n;
-
-    return 0;
-}
-
-int offset_modify(int n, size_t cell_count)
-{
-    int new_offset = n % (int)cell_count;
-    OFFSET = new_offset;
-    return 0;
-}
-
-int run_command(char* command, int n, uint8_t* array, size_t* ptr, size_t cell_count)
+int run_command(char* command, int n, uint8_t* array, size_t* ptr)
 {
     // matches command and runs appropriate function
     // returns
@@ -330,12 +64,12 @@ int run_command(char* command, int n, uint8_t* array, size_t* ptr, size_t cell_c
     
     else if (strcmp(command, PTR_CMD) == 0)
     {
-        exit_code = ptr_modify(ptr, n, cell_count);
+        exit_code = ptr_modify(ptr, n);
     }
 
     else if (strcmp(command, OFFSET_CMD) == 0)
     {
-        exit_code = offset_modify(n, cell_count);
+        exit_code = offset_modify(n);
     }
 
     else 
@@ -346,7 +80,7 @@ int run_command(char* command, int n, uint8_t* array, size_t* ptr, size_t cell_c
     return exit_code;
 }
 
-int get_command(uint8_t* array, size_t* ptr, size_t cell_count)
+int get_command(uint8_t* array, size_t* ptr)
 {
     // gets command and calls approriate function
     // returns 
@@ -372,7 +106,7 @@ int get_command(uint8_t* array, size_t* ptr, size_t cell_count)
         ERROR_MESSAGE = "Missing n\n";
     }
 
-    int exit_code = run_command(command, n, array, ptr, cell_count);
+    int exit_code = run_command(command, n, array, ptr);
     if (exit_code == 1)
     {
         printf("Error running command\n");
@@ -382,18 +116,18 @@ int get_command(uint8_t* array, size_t* ptr, size_t cell_count)
     return 0;
 }
 
-int debug(uint8_t* array, char* bf, size_t* ptr, size_t* idx, int cell_count)
+int debug(uint8_t* array, char* bf, size_t* ptr, size_t* idx)
 {
     if (MAX_DIGITS == -1)
     {
-        set_max_digits(cell_count);
+        set_max_digits();
     }
 
-    display(bf, array, (*ptr), (*idx), cell_count);
+    display(bf, array, (*ptr), (*idx));
     
-    while (get_command(array, ptr, cell_count) != -1)
+    while (get_command(array, ptr) != -1)
     {
-        display(bf, array, (*ptr), (*idx), cell_count);
+        display(bf, array, (*ptr), (*idx));
     }
 
     return 0;

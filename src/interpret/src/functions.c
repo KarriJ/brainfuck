@@ -5,6 +5,7 @@
 #include <string.h>
 #include "../../../headers/bf_config.h"
 #include "../../debug/headers/debug.h"
+#include "../../debug/headers/stdout_tracker.h"
 #include <stdbool.h>
 
 #define CELL_COUNT 30000
@@ -116,6 +117,10 @@ int input(uint8_t* array, size_t ptr)
         return 1;
     }
     
+    if (debug_enabled() == 1)
+    {
+        printf("STDIN : ");
+    }
     int value = getchar();
     array[ptr] = (value == EOF) ? (uint8_t)0 : (uint8_t)value;
 

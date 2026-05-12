@@ -5,8 +5,8 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include "../headers/interpreter_config.h"
 #include "../../../headers/bf_config.h"
-
 
 #define CELL_COUNT 30000
 
