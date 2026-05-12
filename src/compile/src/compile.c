@@ -8,12 +8,6 @@ int compile(char* source_path, char* destination)
 {
     char* source_code = read_file(source_path);
 
-    if (validate_source_code(source_code) == 1)
-    {   
-        printf("Error loading source code\n");
-        free(source_code);
-        return 1;
-    }
 
     char* program = transpile(source_code);
 

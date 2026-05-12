@@ -38,13 +38,6 @@ int interpret(char* source_path)
 {   
     char* source_code = read_file(source_path);
 
-    if (validate_source_code((char*)source_code) == 1)
-    {   
-        printf("Error loading source code\n");
-        free(source_code);
-        return 1;
-    }
-
     if (run_program(source_code) == 1)
     {
         printf("Errors occured while interpreting program\n");

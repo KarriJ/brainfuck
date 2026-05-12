@@ -4,27 +4,6 @@
 #include "../headers/bf_config.h"
 
 
-int validate_source_code(char* source_code)
-{   
-    // Checks if source code was correctly loaded
-    // Returns 1 if errors occured or source code empty
-    // 0 if no issues
-    if (source_code == NULL)
-    {
-        printf("Error reading source code\n");
-        return 1;
-    }
-
-    if (source_code[0] == '\0')
-    {
-        printf("Source code empty\n");
-        free(source_code);
-        return 1;
-    }
-
-    return 0;
-}
-
 char* re_size(char* arr, size_t size)
 {   
     // reallocs memory to char* arr, return char* new
