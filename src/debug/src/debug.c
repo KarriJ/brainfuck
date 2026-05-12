@@ -7,6 +7,7 @@
 #include <stdint.h>
 #include <stdint.h>
 #include <string.h>
+#include <ctype.h>
 
 #define INSTRUCTIONS "COMMANDS:\n| <empty> = execute instruction | <offset> <n> = change ptr view offset|\n| <byte> <n> = change byte value | <ptr> <n> = move ptr |\n"
 #define BYTE_CMD "byte"
@@ -25,6 +26,7 @@ typedef struct
     uint8_t* array;
     size_t capacity;
     size_t first;
+    size_t count;
 } Stdout_tracker;
 
 #define TRACKER_CAPACITY 25
@@ -33,9 +35,17 @@ bool TRACKING_STARTED = false;
 Stdout_tracker STDOUT_TRACKER;
 
 void tracker_push(Stdout_tracker* tracker, uint8_t val)
-{
-    tracker->array[tracker->first] = val;
-    tracker->first = (tracker->first + 1) % tracker->capacity;
+{   
+    if (tracker->count < tracker->capacity)
+    {
+        tracker->array[tracker->count] = val; 
+        tracker->count++;
+    }
+    else  
+    {
+        tracker->array[tracker->first] = val;
+        tracker->first = (tracker->first + 1) % tracker->capacity;
+    }
 }
 
 void tracker_print(Stdout_tracker* tracker)
@@ -50,8 +60,7 @@ void tracker_print(Stdout_tracker* tracker)
 Stdout_tracker make_tracker()
 {
     static uint8_t array[TRACKER_CAPACITY + 1];
-    //array[TRACKER_CAPACITY] = '\0';
-    memset(array, ' ', TRACKER_CAPACITY);
+    array[TRACKER_CAPACITY] = '\0';
 
     return (Stdout_tracker) {
         array,
@@ -112,13 +121,26 @@ void clear_screen()
     printf("\033[2J\033[H");
 }
 
-void display_cell_number(int cell, int cell_count)
+int cell_index_fix(int cell, int cell_count)
 {
-    // displays the index of given cell
+    // helps wrap cell index if below 0 or above CELL_COUNT - 1
     if (cell < 0)
     {
         cell = cell_count + cell;
     }
+
+    if (cell >= cell_count)
+    {
+        cell = cell % cell_count;
+    }
+
+    return cell;
+}
+
+void display_cell_number(int cell, int cell_count)
+{
+    // displays the index of given cell
+    cell = cell_index_fix(cell, cell_count);
     printf(" %*d  ", MAX_DIGITS,  cell);
 }
 
@@ -139,16 +161,13 @@ void display_cell_numbers(uint8_t* array, int ptr, int cell_count)
 void display_cell_value(uint8_t* array, int cell, int cell_count)
 {
     // displays value of byte in data array
-    if (cell < 0)
-    {
-        cell = cell_count - cell;
-    }
+    cell = cell_index_fix(cell, cell_count);
     printf("[%*u] ", MAX_DIGITS,  array[cell]);
 }
 
 void display_cell_values(uint8_t* array, int ptr, int cell_count)
 {
-    // displayes 11 values from data array
+    // displays 11 values from data array
     // 5 from both sides of ptr
     printf("VAL  : ...");
     int cell = (int)ptr + OFFSET - 5;
@@ -156,6 +175,29 @@ void display_cell_values(uint8_t* array, int ptr, int cell_count)
     for (int ii = 0; ii < 11; ii++, cell++)
     {
         display_cell_value(array, cell, cell_count);
+    }
+    printf("...\n");
+
+}
+
+void display_ascii_value(uint8_t* array, int cell, int cell_count)
+{
+    // displays ascii representation for byte in data array
+    cell = cell_index_fix(cell, cell_count);
+    char ch = ( isprint(array[cell]) ) ? (char)array[cell] : ' ';
+    printf("[%*c] ", MAX_DIGITS, ch);
+}
+
+void display_ascii_values(uint8_t* array, int ptr, int cell_count)
+{
+    // displays ascii representations for 11 values from data array
+    // 5 from both sides of ptr
+    printf("ASCII: ...");
+    int cell = (int)ptr + OFFSET - 5;
+    
+    for (int ii = 0; ii < 11; ii++, cell++)
+    {
+        display_ascii_value(array, cell, cell_count);
     }
     printf("...\n");
 
@@ -222,6 +264,7 @@ void display(char* bf, uint8_t* array, size_t ptr, size_t idx, int cell_count)
     printf("\n\n");
     display_cell_numbers(array, ptr, cell_count);
     display_cell_values(array, ptr, cell_count);
+    display_ascii_values(array, ptr, cell_count);
     printf("\n\n");
     display_modifiers(ptr);
     display_instruction_stream(bf, idx);
