@@ -9,7 +9,7 @@
 #include "../../interpret/headers/interpreter_config.h"
 #include "../headers/debug_display.h"
 #include "../headers/debug_commands.h"
-
+#include "../headers/debug_exit_codes.h"
 
 bool DEBUGENABLED = false;
 
@@ -49,14 +49,15 @@ int debug_disable()
     return 1;
 }
 
-int run_command(char* command, int n, uint8_t* array, size_t* ptr)
+Debugger_exit run_command(char* command, int n, uint8_t* array, size_t* ptr)
 {
     // matches command and runs appropriate function
     // returns
-    // 1 if errors
-    // 0 if no errors or command not recognized
-    // -1 for command was not run
-    int exit_code = 0;
+    // FATAL_ERR if errors that can't be handled
+    // ERR if errors can be handled
+    // NO_ERR if no errors or command was not recognized
+    int exit_code = NO_ERR;
+
     if (strcmp(command, BYTE_CMD) == 0)
     {
         exit_code = byte_modify(array, (*ptr), n);
@@ -80,40 +81,45 @@ int run_command(char* command, int n, uint8_t* array, size_t* ptr)
     return exit_code;
 }
 
-int get_command(uint8_t* array, size_t* ptr)
+Debugger_exit get_command(uint8_t* array, size_t* ptr)
 {
     // gets command and calls approriate function
     // returns 
-    // -1 if empty command (move forward)
+    // -1 if empty
     // 0 if command ran without errors or was not recognized
-    // 1 if errors
+    // 1 if fatal errors
     
     char line[2048];
     char command[100];
     int n;
 
     printf("Debugger command : ");
-    fgets(line, sizeof(line), stdin);
-
-    if (line[0] == '\n')
+    if (fgets(line, sizeof(line), stdin) == NULL)
     {
-        return -1;
+        printf("EOF in stdin\n");
+        return FATAL_ERR;
     }
 
+    if (line[0] == '\n' || line[0] == '\0')
+    {
+        return EMPTY;
+    }
+    
     int argc = sscanf(line, "%99s %d", command, &n);
     if (argc == 1)
     {
         ERROR_MESSAGE = "Missing n\n";
+        return ERR;
     }
 
-    int exit_code = run_command(command, n, array, ptr);
-    if (exit_code == 1)
+    Debugger_exit exit_code = run_command(command, n, array, ptr);
+    if (exit_code == FATAL_ERR)
     {
         printf("Error running command\n");
-        return 1;
+        return FATAL_ERR;
     }
 
-    return 0;
+    return NO_ERR;
 }
 
 int debug(uint8_t* array, char* bf, size_t* ptr, size_t* idx)
@@ -125,8 +131,17 @@ int debug(uint8_t* array, char* bf, size_t* ptr, size_t* idx)
 
     display(bf, array, (*ptr), (*idx));
     
-    while (get_command(array, ptr) != -1)
-    {
+    Debugger_exit code = NO_ERR;
+    while (code != EMPTY)
+    {   
+        code = get_command(array, ptr);
+
+        if (code == FATAL_ERR)
+        {
+            printf("Debugger command error\n");
+            return 1;
+        }
+
         display(bf, array, (*ptr), (*idx));
     }
 
