@@ -16,7 +16,7 @@ typedef enum
     LOOP_END = ']'
 } Instruction;
 
-int is_instruction(Instruction instruction)
+int is_instruction(char instruction)
 {
     // returns 1 if found char ch is found in global char* INSTRUCTION_SET
     // otherwise 0

@@ -19,7 +19,7 @@ typedef enum
     LOOP_END = ']'
 } Instruction;
 
-int is_instruction(Instruction instruction);
+int is_instruction(char instruction);
 int validate_loops(char* array);
 
 
