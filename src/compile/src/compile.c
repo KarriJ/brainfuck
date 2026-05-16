@@ -7,16 +7,16 @@
 int compile(char* source_path, char* destination)
 {
     char* source_code = read_file(source_path);
-
+    
+    if (validate_loops(source_code) == 1)
+    {
+        printf("Error with loops\n");
+        free(source_code);
+        return 1;
+    }
 
     char* program = transpile(source_code);
 
-    if (validate_loops(program) == 1)
-    {
-        printf("Error with loops\n");
-        free(program);
-        return 1;
-    }
 
     if (program == NULL)
     {
